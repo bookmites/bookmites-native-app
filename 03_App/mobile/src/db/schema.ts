@@ -28,5 +28,14 @@ export const readingProgress = sqliteTable("reading_progress", {
   updatedAt: integer("updated_at").notNull(),
 });
 
+export const READER_GLOBAL_SETTINGS_ID = "global" as const;
+
+export const readerGlobalSettings = sqliteTable("reader_global_settings", {
+  id: text("id").primaryKey(),
+  fontSizeTier: text("font_size_tier").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});
+
 export type BookRow = typeof books.$inferSelect;
 export type ReadingProgressRow = typeof readingProgress.$inferSelect;
+export type ReaderGlobalSettingsRow = typeof readerGlobalSettings.$inferSelect;

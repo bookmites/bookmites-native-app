@@ -1,16 +1,34 @@
 import { router, useLocalSearchParams } from "expo-router";
+import { useCallback, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 import { AppText } from "@/components/ui/AppText";
 import { Button } from "@/components/ui/Button";
 import { Screen } from "@/components/ui/Screen";
 import { colors, spacing } from "@/design/tokens";
-import { ReaderSurface, useReaderBookSession } from "@/services";
+import {
+  ReaderSurface,
+  isReaderFontSizeTier,
+  useReaderBookSession,
+  useReaderFontSize,
+  type ReaderFontSizeTier,
+} from "@/services";
+
+import { ReaderSettingsModal } from "./ReaderSettingsModal";
 
 export function ReaderScreen() {
   const { bookId: bookIdParam } = useLocalSearchParams<{ bookId?: string }>();
   const bookId = typeof bookIdParam === "string" ? bookIdParam : undefined;
   const { state, onLocationChange, onPublicationError } = useReaderBookSession(bookId);
+  const { tier, setTier, preferences } = useReaderFontSize();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  const onFontSizeTierChange = useCallback(
+    (next: ReaderFontSizeTier) => {
+      void setTier(next);
+    },
+    [setTier],
+  );
 
   return (
     <Screen padded={false}>
@@ -25,6 +43,12 @@ export function ReaderScreen() {
             {bookId}
           </AppText>
         ) : null}
+        <Button
+          label="Settings"
+          variant="secondary"
+          onPress={() => setSettingsOpen(true)}
+          style={styles.settingsButton}
+        />
       </View>
 
       <View style={styles.body}>
@@ -54,12 +78,24 @@ export function ReaderScreen() {
         {bookId && state.status === "ready" ? (
           <ReaderSurface
             file={state.file}
+            preferences={preferences}
             onLocationChange={onLocationChange}
             onPublicationError={onPublicationError}
             style={styles.reader}
           />
         ) : null}
       </View>
+
+      <ReaderSettingsModal
+        visible={settingsOpen}
+        fontSizeTier={tier}
+        onClose={() => setSettingsOpen(false)}
+        onFontSizeTierChange={(value) => {
+          if (isReaderFontSizeTier(value)) {
+            onFontSizeTierChange(value);
+          }
+        }}
+      />
     </Screen>
   );
 }
@@ -74,6 +110,10 @@ const styles = StyleSheet.create({
   },
   bookIdLabel: {
     flex: 1,
+  },
+  settingsButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
   body: {
     flex: 1,

@@ -12,7 +12,7 @@ Tags: import, library, document-picker, copy-on-import, metadata
 
 | Field | Value |
 |-------|--------|
-| Commit | _(none yet)_ |
+| Commit | `160f8535bc305e665746a326dd2d30b2820585c7` |
 | Depends on | [003 — SQLite `books` table v1 + smoke seed](./003_Books-table-v1.md) |
 | Unblocks | Reader prefs / locator after resize (005, draft), remove book / file-off (006), highlight persistence (later) |
 

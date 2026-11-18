@@ -150,6 +150,21 @@
 |-----|--------|----------|
 | `0000_black_raider` | 002 | `reading_progress` (no FK yet). |
 | `0001_happy_nitro` | 003 | `books`, smoke `INSERT`, `reading_progress` rebuilt with FK **RESTRICT**. |
+| `0002_neat_tyger_tiger` | 005 | `reader_global_settings` (global font size tier). |
+
+---
+
+## Global reader settings (ticket 005)
+
+| Table | Purpose |
+|-------|---------|
+| `reader_global_settings` | Singleton row `id = global`: `font_size_tier` (`small` \| `medium` \| `large` \| `xl` \| `2xl`), `updated_at`. Not keyed by `bookId`. |
+
+**Default:** No row required on first run — app treats missing row as **`medium`**; first change upserts `global`.
+
+**Wire format:** `services/reader/readerFontSizeTier.ts` maps tier → Readium `preferences.fontSize` (Medium = product 1×; Small uses Readium min `1.0` with Medium baseline scaled so Small ≈ 0.85× Medium).
+
+**Shell vs epub:** Only `ReadiumView` receives `preferences`; library/reader chrome uses `design/tokens`.
 
 ---
 

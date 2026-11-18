@@ -15,6 +15,13 @@
       "when": 1794972589327,
       "tag": "0001_happy_nitro",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1794979460355,
+      "tag": "0002_neat_tyger_tiger",
+      "breakpoints": true
     }
   ]
 }
