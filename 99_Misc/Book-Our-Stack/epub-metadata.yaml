@@ -1,0 +1,32 @@
+---
+# Pandoc YAML metadata for "The Book of Our Stack"
+# Fill in any TODO lines before release exports; draft values are fine for local builds.
+title: The Bookmite Stack
+subtitle: A guided tour of the Bookmite Reader technology stack
+author:
+  - Bookmites
+lang: en-US
+date: 2026-11-12
+description: |
+  A guided tour of the technology behind Bookmite Reader—for product-minded
+  readers who want to understand the machinery, not publish epubs. Covers
+  React Native, Expo, Android builds, repo structure, EPUB and Readium,
+  on-device data, and end-to-end reading flows (Parts I–V).
+identifier:
+  - scheme: UUID
+    text: urn:uuid:7c4f8e2a-9b1d-4e6f-a3c5-8d2e1f0a9b4c
+publisher: Bookmites
+rights: |
+  © Bookmites. Licensed under Creative Commons Attribution 4.0 International
+  (CC BY 4.0). You may share and adapt this work for any purpose, including
+  commercially, provided you give appropriate credit. See
+  https://creativecommons.org/licenses/by/4.0/
+subject:
+  - React Native
+  - Expo
+  - EPUB
+  - Readium
+  - Android
+  - SQLite
+cover-image: cover.jpg
+---
