@@ -29,7 +29,7 @@
 **Why:**
 
 - Decouples routing and artifacts from epub filename or OPF title.
-- Import can assign ids (e.g. UUID or deterministic id—**TBD in 004**) before copy completes.
+- Import assigns **`expo-crypto` `randomUUID()`** before copy ([ticket 004](../02_Tickets/004_Copy-on-import-and-library-list.md)).
 - Dev smoke uses a conventional id: **`fixture.smoke`** ([ticket 002](../02_Tickets/002_Persistent-Location.md)).
 
 **Convention:** Artifact tables use column **`book_id`** referencing **`books.book_id`**.
@@ -43,7 +43,7 @@
 **Why:**
 
 - Single place to change layout if we add subfolders or move the tree.
-- Aligns with copy-on-import: import writes bytes under this root; SQLite stores only the **suffix** (e.g. `{bookId}.epub` or `epubs/{bookId}.epub`—**exact relative pattern for 004 TBD**; schema column is ready).
+- Aligns with copy-on-import: import writes bytes under this root; SQLite stores **`library_relative_path`** = **`{bookId}.epub`** (filename only; root is already `…/epubs/`). See [004](../02_Tickets/004_Copy-on-import-and-library-list.md).
 
 **Not stored in SQLite:** Absolute `file://` paths for imported books.
 
@@ -53,14 +53,14 @@
 
 ---
 
-## SQLite schema (Phase 0.2, through ticket 003)
+## SQLite schema (Phase 0.2, through ticket 004)
 
 ### `books`
 
 | Column | Purpose |
 |--------|---------|
 | `book_id` | PK; stable `bookId`. |
-| `title`, `author` | Display metadata; author nullable. Import fills from epub (**004**); smoke uses fixed title. |
+| `title`, `author` | Display metadata; author nullable. Import fills from package OPF (`dc:title` / `dc:creator`), filename fallback; smoke uses fixed title. |
 | `kind` | `bundled_fixture` \| `imported`. Chooses open strategy. |
 | `fixture_key` | For `bundled_fixture` only (e.g. `smoke`). NULL for imported. |
 | `library_relative_path` | For `imported` only; relative to library root. NULL for bundled. |
@@ -134,7 +134,9 @@
 | Layer | Responsibility |
 |-------|----------------|
 | `db/` | `getBook`, `upsertBook`, progress helpers; no Readium. |
-| `services/library/` | `getLibraryEpubRoot()`. |
+| `services/library/` | `getLibraryEpubRoot()`, `pickAndImportBook`, `listLibraryBooks` (UI sort). |
+| `services/epub/` | Package OPF metadata for import only (not Readium). |
+| `features/library/` | List UI, `useLibraryBooks`; calls `services/`, `db/`. |
 | `services/reader/` | `resolveBookFile`: load book row → URL + optional `initialLocation` from progress. |
 | `features/reader/` | UI; does not import Readium or parse locators. |
 
@@ -151,9 +153,18 @@
 
 ---
 
+## Import flow (ticket 004)
+
+1. User picks epub via **`expo-document-picker`**.
+2. App assigns **`randomUUID()`** `bookId`, copies to **`{getLibraryEpubRoot()}{bookId}.epub`**.
+3. **`readEpubPackageMetadata`** reads `dc:title` / `dc:creator` from copied bytes; filename fallback if OPF fails.
+4. **`upsertBook`** with `kind = imported`, `library_relative_path = {bookId}.epub`, `file_on_device = 1`.
+5. Library UI lists all `books` rows; **`bundled_fixture`** first, then imported by title. No navigation to reader after import.
+
+---
+
 ## Explicitly later (not decided here)
 
-- **004:** `bookId` generation on import, relative path naming, OPF metadata → `title`/`author`, picker + copy implementation.
 - **Highlights** table(s), snippet text, decorations.
 - **006:** Remove-file and remove-book UX wired to semantics above.
 - Import **dedupe by hash**; cloud backup shape; soft-delete vs hard-delete.
@@ -165,4 +176,4 @@
 
 - [Architecture and dependencies](./3_Architecture-and-Dependencies.md) — stack, copy-on-import, locators, folder layout.
 - [Phases and progress](./1_Phases-and-Progress.md) — product capabilities Phase 0.2.
-- Tickets: [002](../02_Tickets/002_Persistent-Location.md), [003](../02_Tickets/003_Books-table-v1.md).
+- Tickets: [002](../02_Tickets/002_Persistent-Location.md), [003](../02_Tickets/003_Books-table-v1.md), [004](../02_Tickets/004_Copy-on-import-and-library-list.md).

@@ -3,6 +3,11 @@
  * Readium stays behind services — not in features (ticket 001).
  */
 export {
+  listLibraryBooks,
+  pickAndImportBook,
+  type ImportBookResult,
+} from "./library";
+export {
   BOOK_IDS,
   ReaderSurface,
   resolveBookFile,
