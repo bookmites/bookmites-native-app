@@ -36,6 +36,18 @@ export const readerGlobalSettings = sqliteTable("reader_global_settings", {
   updatedAt: integer("updated_at").notNull(),
 });
 
+export const bookQuotes = sqliteTable("book_quotes", {
+  quoteId: text("quote_id").primaryKey(),
+  bookId: text("book_id")
+    .notNull()
+    .references(() => books.bookId, { onDelete: "restrict" }),
+  locatorJson: text("locator_json").notNull(),
+  snippet: text("snippet").notNull(),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});
+
 export type BookRow = typeof books.$inferSelect;
 export type ReadingProgressRow = typeof readingProgress.$inferSelect;
 export type ReaderGlobalSettingsRow = typeof readerGlobalSettings.$inferSelect;
+export type BookQuoteRow = typeof bookQuotes.$inferSelect;

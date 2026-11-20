@@ -84,7 +84,19 @@
 - **File off device** → update `books.file_on_device` / files on disk only; **keep** `reading_progress`.
 - **Remove book from library (later)** → explicit UX: delete artifacts (progress, then highlights), **then** delete `books`—not one easy tap. FK **RESTRICT** enforces that order in the database.
 
-**Future:** Highlights (and notes) should reference `book_id` with the same integrity story—likely **RESTRICT** until an explicit “remove entirely” transaction is defined (**006** area).
+**BookQuotes (ticket 006):** `book_quotes` references `book_id` with **ON DELETE RESTRICT**, same pattern as `reading_progress`. Quotes survive `file_on_device = 0`; notebook lists by snippet + join on `books` for title.
+
+### `book_quotes`
+
+| Column | Purpose |
+|--------|---------|
+| `quote_id` | PK; `randomUUID()` on create (not derived from locator). |
+| `book_id` | FK → `books.book_id` **ON DELETE RESTRICT**. |
+| `locator_json` | Readium `Locator` JSON; updated when user changes highlight scope in reader. |
+| `snippet` | Selection text at save time (required for list UI; paired with locator). |
+| `created_at`, `updated_at` | Epoch ms; `updated_at` changes on in-reader highlight edit. |
+
+**Boundary:** CRUD in `db/bookQuotes.ts` + `services/bookQuotes/`; decorations/selection in `services/reader/` only. Features do not import Readium.
 
 ---
 
@@ -151,6 +163,7 @@
 | `0000_black_raider` | 002 | `reading_progress` (no FK yet). |
 | `0001_happy_nitro` | 003 | `books`, smoke `INSERT`, `reading_progress` rebuilt with FK **RESTRICT**. |
 | `0002_neat_tyger_tiger` | 005 | `reader_global_settings` (global font size tier). |
+| `0003_sweet_ghost_rider` | 006 | `book_quotes` (highlights / BookQuote rows). |
 
 ---
 
@@ -180,8 +193,8 @@
 
 ## Explicitly later (not decided here)
 
-- **Highlights** table(s), snippet text, decorations.
-- **006:** Remove-file and remove-book UX wired to semantics above.
+- **006 follow-ons:** Per-quote delete, colors/tags/notes on `book_quotes`.
+- Remove-file and remove-book UX wired to semantics above.
 - Import **dedupe by hash**; cloud backup shape; soft-delete vs hard-delete.
 - Whether **`onConflictDoUpdate`** on `upsertBook` should preserve `added_at` on conflict (current code sets on insert only).
 

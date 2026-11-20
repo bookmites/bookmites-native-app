@@ -1,6 +1,11 @@
 export { BOOK_IDS, type BookId, isBookId } from "./bookIds";
+export {
+  READER_HIGHLIGHT_ACTION_ID,
+  bookQuotesToDecorationGroup,
+} from "./bookQuoteDecorations";
 export { ReaderSurface, type ReaderSurfaceProps } from "./ReaderSurface";
 export { resolveBookFile, type ResolvedBookFile } from "./resolveBookFile";
+export { useReaderBookQuotes } from "./useReaderBookQuotes";
 export {
   DEFAULT_READER_FONT_SIZE_TIER,
   READER_FONT_SIZE_LABELS,

@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+import { router, type Href } from "expo-router";
 import { useCallback, useState } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, View } from "react-native";
 
@@ -57,6 +57,21 @@ export function LibraryScreen() {
           variant="secondary"
           onPress={() => setSettingsOpen(true)}
           style={styles.settingsButton}
+        />
+      </View>
+
+      <View style={styles.navRow}>
+        <Button
+          label="Notebook"
+          variant="secondary"
+          onPress={() => router.push("/notebook" as Href)}
+          style={styles.navButton}
+        />
+        <Button
+          label="View stored data"
+          variant="secondary"
+          onPress={() => router.push("/data" as Href)}
+          style={styles.navButton}
         />
       </View>
 
@@ -126,6 +141,16 @@ const styles = StyleSheet.create({
   },
   settingsButton: {
     marginTop: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  navRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  navButton: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },

@@ -12,7 +12,7 @@ Tags: readium, preferences, font-size, reader-settings, locator
 
 | Field | Value |
 |-------|--------|
-| Commit | _(none yet)_ |
+| Commit | `d2b37150f44262de73e926e2d25d6909d4754fa4` |
 | Depends on | [004 — Copy-on-import + library list](./004_Copy-on-import-and-library-list.md) |
 | Unblocks | Dyslexic font / reader theme (later), highlight persistence (later) |
 | Living contracts | [Schema and paths](../01_PRD-and-Guidelines/4_Schema-and-Paths.md) (locators + new prefs storage); [Architecture](../01_PRD-and-Guidelines/3_Architecture-and-Dependencies.md) |

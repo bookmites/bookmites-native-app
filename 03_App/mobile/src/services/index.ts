@@ -3,6 +3,14 @@
  * Readium stays behind services — not in features (ticket 001).
  */
 export {
+  createBookQuote,
+  listAllBookQuotes,
+  listBookQuotesByBook,
+  updateBookQuote,
+  type BookQuoteRow,
+  type BookQuoteWithBookTitle,
+} from "./bookQuotes";
+export {
   listLibraryBooks,
   pickAndImportBook,
   type ImportBookResult,
@@ -15,6 +23,7 @@ export {
   READER_FONT_SIZE_TIERS,
   isReaderFontSizeTier,
   resolveBookFile,
+  useReaderBookQuotes,
   useReaderBookSession,
   useReaderFontSize,
   type BookId,
