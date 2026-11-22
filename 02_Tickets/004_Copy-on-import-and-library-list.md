@@ -1,7 +1,11 @@
 ---
 Status: done
 Tags: import, library, document-picker, copy-on-import, metadata
+Version: kyle-readium-experiment
 ---
+
+*NOTE: this was from an early version when Kyle was trying to do a build with Readium. We ended up pulling the plug on this in Ticket 007*
+
 # Ticket 004 — Copy-on-import + library list
 
 **Status:** Done  

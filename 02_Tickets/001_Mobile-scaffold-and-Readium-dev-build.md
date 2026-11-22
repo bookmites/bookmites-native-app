@@ -1,7 +1,11 @@
 ---
 Status: done
 Tags: android setup, expo, metro, physical device
+Version: kyle-readium-experiment
 ---
+
+*NOTE: this was from an early version when Kyle was trying to do a build with Readium. We ended up pulling the plug on this in Ticket 007*
+
 # Ticket 001 — Mobile foundation: dev stack + Readium smoke
 
 **Status:** Planned  

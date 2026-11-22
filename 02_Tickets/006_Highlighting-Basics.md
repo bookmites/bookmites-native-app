@@ -1,7 +1,11 @@
 ---
 Status: superseded by 007 (completed on the in-house reader)
 Tags: readium, book-quotes, highlights, notebook, sqlite, locator
+Version: kyle-readium-experiment
 ---
+
+*NOTE: this was from an early version when Kyle was trying to do a build with Readium. We ended up pulling the plug on this in Ticket 007*
+
 # Ticket 006 — BookQuotes: highlight basics + Notebook + data page
 
 **Status:** Superseded by [007 — In-house epub reader](./007_In-house-epub-reader.md). The product scope below (create / edit / persist / Notebook / data page) is completed there on the in-house reader; the Readium implementation notes are historical. Schema changed in 007: `locator_json` → `cfi`, plus `refcode`.  

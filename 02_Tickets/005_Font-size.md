@@ -1,7 +1,11 @@
 ---
 Status: done
 Tags: readium, preferences, font-size, reader-settings, locator
+Version: kyle-readium-experiment
 ---
+
+*NOTE: this was from an early version when Kyle was trying to do a build with Readium. We ended up pulling the plug on this in Ticket 007*
+
 # Ticket 005 — Reader font size (global) + locator after resize
 
 **Status:** Done  
