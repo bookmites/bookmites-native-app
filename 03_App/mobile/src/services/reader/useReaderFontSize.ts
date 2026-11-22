@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { Preferences } from "react-native-readium";
 
 import { getReaderFontSizeTier, setReaderFontSizeTier } from "@/db/readerSettings";
 
 import {
+  buildReaderCss,
   DEFAULT_READER_FONT_SIZE_TIER,
   isReaderFontSizeTier,
-  readerFontSizeToPreferences,
   type ReaderFontSizeTier,
 } from "./readerFontSizeTier";
 
@@ -40,10 +39,8 @@ export function useReaderFontSize() {
     await setReaderFontSizeTier(next);
   }, []);
 
-  const preferences: Preferences = useMemo(
-    () => readerFontSizeToPreferences(tier),
-    [tier],
-  );
+  /** Stylesheet for the reader WebView. */
+  const css = useMemo(() => buildReaderCss(tier), [tier]);
 
-  return { tier, setTier, preferences, loading };
+  return { tier, setTier, css, loading };
 }

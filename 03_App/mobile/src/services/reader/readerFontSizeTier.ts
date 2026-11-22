@@ -1,11 +1,11 @@
-import type { Preferences } from "react-native-readium";
+import { colors } from "@/design/tokens";
 
 /**
- * UX tiers vs Readium `fontSize`. Medium = product baseline (1×).
- * Readium documents fontSize ≈ [1.0, 3.0]; Small uses 1.0 and Medium is scaled
- * so Small = 0.85× Medium visually (ticket 005).
+ * UX font-size tiers (ticket 005). Medium is the product baseline; the other tiers scale it,
+ * with Small = 0.85× Medium. Sizes are applied to the root element of each spine document,
+ * so publisher styles written in relative units (em/rem/%) scale with the tier.
  */
-const MEDIUM_BASE = 1 / 0.85;
+const MEDIUM_ROOT_PX = 18;
 
 const TIER_MULTIPLIER = {
   small: 0.85,
@@ -39,12 +39,27 @@ export function isReaderFontSizeTier(value: string): value is ReaderFontSizeTier
   return (READER_FONT_SIZE_TIERS as readonly string[]).includes(value);
 }
 
-export function readerFontSizeToReadium(tier: ReaderFontSizeTier): number {
-  const multiplier = TIER_MULTIPLIER[tier];
-  const raw = multiplier * MEDIUM_BASE;
-  return Math.min(3, Math.max(1, raw));
+export function readerFontSizePx(tier: ReaderFontSizeTier): number {
+  return Math.round(MEDIUM_ROOT_PX * TIER_MULTIPLIER[tier] * 10) / 10;
 }
 
-export function readerFontSizeToPreferences(tier: ReaderFontSizeTier): Preferences {
-  return { fontSize: readerFontSizeToReadium(tier) };
+/** Reader stylesheet injected into every spine document for the given settings. */
+export function buildReaderCss(tier: ReaderFontSizeTier): string {
+  return `
+html {
+  font-size: ${readerFontSizePx(tier)}px !important;
+  background-color: ${colors.background} !important;
+}
+body {
+  font-size: 1rem !important;
+  line-height: 1.6;
+  color: ${colors.textPrimary};
+  background-color: transparent !important;
+  overflow-wrap: break-word;
+}
+img, svg, video {
+  max-width: 100%;
+  height: auto;
+}
+`;
 }

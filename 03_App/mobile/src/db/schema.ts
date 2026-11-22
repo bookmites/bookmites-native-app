@@ -24,7 +24,8 @@ export const readingProgress = sqliteTable("reading_progress", {
     .primaryKey()
     .notNull()
     .references(() => books.bookId, { onDelete: "restrict" }),
-  locatorJson: text("locator_json").notNull(),
+  /** Point CFI of the first content in view (ticket 007; replaced Readium locator JSON). */
+  cfi: text("cfi").notNull(),
   updatedAt: integer("updated_at").notNull(),
 });
 
@@ -41,7 +42,13 @@ export const bookQuotes = sqliteTable("book_quotes", {
   bookId: text("book_id")
     .notNull()
     .references(() => books.bookId, { onDelete: "restrict" }),
-  locatorJson: text("locator_json").notNull(),
+  /** Range CFI of the highlighted text (ticket 007; replaced Readium locator JSON). */
+  cfi: text("cfi").notNull(),
+  /**
+   * Refcode of the range start — a sortable integer for reading order within a book.
+   * Null when it could not be computed (e.g. an unparseable spine document).
+   */
+  refcode: integer("refcode"),
   snippet: text("snippet").notNull(),
   createdAt: integer("created_at").notNull(),
   updatedAt: integer("updated_at").notNull(),

@@ -1,7 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
-import type { Locator } from "react-native-readium";
 
 import { AppText } from "@/components/ui/AppText";
 import { Button } from "@/components/ui/Button";
@@ -14,6 +13,7 @@ import {
   useReaderBookSession,
   useReaderFontSize,
   type ReaderFontSizeTier,
+  type ReaderSurfaceHandle,
 } from "@/services";
 
 import { ReaderSettingsModal } from "./ReaderSettingsModal";
@@ -21,27 +21,39 @@ import { ReaderSettingsModal } from "./ReaderSettingsModal";
 export function ReaderScreen() {
   const { bookId: bookIdParam } = useLocalSearchParams<{ bookId?: string }>();
   const bookId = typeof bookIdParam === "string" ? bookIdParam : undefined;
-  const { state, onLocationChange, onPublicationError } = useReaderBookSession(bookId);
-  const { tier, setTier, preferences } = useReaderFontSize();
+  const surfaceRef = useRef<ReaderSurfaceHandle>(null);
   const {
-    decorations,
+    state,
+    location,
+    spineCount,
+    goTo,
+    goToNextSection,
+    goToPreviousSection,
+    onLocationChange,
+    onError,
+  } = useReaderBookSession(bookId);
+  const { tier, setTier, css } = useReaderFontSize();
+  const {
+    highlights,
     editingQuoteId,
     quoteError,
-    selectionActions,
-    onDecorationActivated,
+    onHighlightTap,
     onSelectionAction,
     onSelectionChange,
     textSelectionActiveRef,
     cancelHighlightEdit,
-  } = useReaderBookQuotes(bookId, { enabled: state.status === "ready" });
+  } = useReaderBookQuotes(bookId, {
+    epub: state.status === "ready" ? state.book.epub : null,
+    surfaceRef,
+  });
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const onLocationChangeWhileReading = useCallback(
-    (locator: Locator) => {
+    (cfi: string) => {
       if (textSelectionActiveRef.current) {
         return;
       }
-      onLocationChange(locator);
+      onLocationChange(cfi);
     },
     [onLocationChange, textSelectionActiveRef],
   );
@@ -53,75 +65,67 @@ export function ReaderScreen() {
     [setTier],
   );
 
-  const ready = Boolean(bookId && state.status === "ready");
+  const ready = state.status === "ready" && location !== null;
+  const spineIndex = location?.spineIndex ?? 0;
 
   return (
     <Screen padded={false}>
-      <View style={styles.shell}>
-        {ready && state.status === "ready" ? (
+      <View style={styles.toolbar}>
+        <Button label="Back" variant="secondary" onPress={() => router.back()} style={styles.toolbarButton} />
+        <AppText variant="caption" muted numberOfLines={1} style={styles.title}>
+          {state.status === "ready" ? state.book.title : (bookId ?? "")}
+        </AppText>
+        <Button
+          label="Settings"
+          variant="secondary"
+          onPress={() => setSettingsOpen(true)}
+          style={styles.toolbarButton}
+        />
+      </View>
+
+      {ready && editingQuoteId ? (
+        <View style={styles.banner}>
+          <AppText variant="caption" style={styles.bannerText}>
+            Select the passage you want, then tap Highlight to update this quote.
+          </AppText>
+          <Button
+            label="Cancel"
+            variant="secondary"
+            onPress={cancelHighlightEdit}
+            style={styles.bannerButton}
+          />
+        </View>
+      ) : null}
+
+      {quoteError ? (
+        <AppText variant="caption" style={styles.quoteError}>
+          {quoteError}
+        </AppText>
+      ) : null}
+
+      <View style={styles.readerArea}>
+        {ready && state.status === "ready" && location ? (
           <ReaderSurface
-            file={state.file}
-            preferences={preferences}
-            decorations={decorations}
-            selectionActions={selectionActions}
+            ref={surfaceRef}
+            book={state.book}
+            location={location}
+            css={css}
+            highlights={highlights}
             onLocationChange={onLocationChangeWhileReading}
-            onPublicationError={onPublicationError}
-            onDecorationActivated={onDecorationActivated}
             onSelectionChange={onSelectionChange}
             onSelectionAction={onSelectionAction}
-            style={styles.reader}
+            onHighlightTap={onHighlightTap}
+            onNavigate={goTo}
+            onError={onError}
           />
-        ) : null}
-
-        <View style={styles.chrome} pointerEvents="box-none">
-          <View style={styles.toolbar} pointerEvents="auto">
-            <Button label="Back" variant="secondary" onPress={() => router.back()} />
-            {state.status === "ready" ? (
-              <AppText variant="caption" muted numberOfLines={1} style={styles.bookIdLabel}>
-                {state.title}
-              </AppText>
-            ) : bookId ? (
-              <AppText variant="caption" muted numberOfLines={1} style={styles.bookIdLabel}>
-                {bookId}
-              </AppText>
-            ) : null}
-            <Button
-              label="Settings"
-              variant="secondary"
-              onPress={() => setSettingsOpen(true)}
-              style={styles.settingsButton}
-            />
-          </View>
-
-          {ready && editingQuoteId ? (
-            <View style={styles.highlightBanner} pointerEvents="auto">
-              <AppText variant="caption" style={styles.highlightBannerText}>
-                Adjust the selection, then tap Highlight to update this quote.
-              </AppText>
-              <Button
-                label="Cancel"
-                variant="secondary"
-                onPress={cancelHighlightEdit}
-                style={styles.highlightBannerButton}
-              />
-            </View>
-          ) : null}
-
-          {quoteError ? (
-            <AppText variant="caption" style={styles.quoteError}>
-              {quoteError}
-            </AppText>
-          ) : null}
-        </View>
-
-        {!ready ? (
-          <View style={styles.statusOverlay} pointerEvents="none">
+        ) : (
+          <View style={styles.status}>
             {!bookId ? (
               <AppText variant="body" muted>
                 No book selected.
               </AppText>
             ) : null}
-            {bookId && state.status === "loading" ? (
+            {bookId && (state.status === "loading" || state.status === "idle") ? (
               <View style={styles.centered}>
                 <ActivityIndicator color={colors.accent} />
                 <AppText variant="body" muted>
@@ -129,12 +133,32 @@ export function ReaderScreen() {
                 </AppText>
               </View>
             ) : null}
-            {bookId && state.status === "error" ? (
-              <AppText variant="body">{state.message}</AppText>
-            ) : null}
+            {state.status === "error" ? <AppText variant="body">{state.message}</AppText> : null}
           </View>
-        ) : null}
+        )}
       </View>
+
+      {ready ? (
+        <View style={styles.sectionBar}>
+          <Button
+            label="Previous"
+            variant="secondary"
+            onPress={goToPreviousSection}
+            disabled={spineIndex <= 0}
+            style={[styles.sectionButton, spineIndex <= 0 && styles.disabled]}
+          />
+          <AppText variant="caption" muted>
+            {`Section ${String(spineIndex + 1)} of ${String(spineCount)}`}
+          </AppText>
+          <Button
+            label="Next"
+            variant="secondary"
+            onPress={goToNextSection}
+            disabled={spineIndex >= spineCount - 1}
+            style={[styles.sectionButton, spineIndex >= spineCount - 1 && styles.disabled]}
+          />
+        </View>
+      ) : null}
 
       <ReaderSettingsModal
         visible={settingsOpen}
@@ -151,24 +175,6 @@ export function ReaderScreen() {
 }
 
 const styles = StyleSheet.create({
-  shell: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  reader: {
-    ...StyleSheet.absoluteFill,
-  },
-  chrome: {
-    ...StyleSheet.absoluteFill,
-    justifyContent: "flex-start",
-  },
-  statusOverlay: {
-    ...StyleSheet.absoluteFill,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: spacing.lg,
-    backgroundColor: colors.background,
-  },
   toolbar: {
     flexDirection: "row",
     alignItems: "center",
@@ -177,25 +183,24 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     backgroundColor: colors.background,
   },
-  bookIdLabel: {
-    flex: 1,
-  },
-  settingsButton: {
+  toolbarButton: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
-  highlightBanner: {
+  title: {
+    flex: 1,
+  },
+  banner: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.sm,
-    backgroundColor: colors.background,
   },
-  highlightBannerText: {
+  bannerText: {
     flex: 1,
   },
-  highlightBannerButton: {
+  bannerButton: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
   },
@@ -203,11 +208,38 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.sm,
+  },
+  readerArea: {
+    flex: 1,
     backgroundColor: colors.background,
+  },
+  status: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: spacing.lg,
   },
   centered: {
     justifyContent: "center",
     alignItems: "center",
     gap: spacing.sm,
+  },
+  sectionBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  sectionButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  disabled: {
+    opacity: 0.4,
   },
 });
