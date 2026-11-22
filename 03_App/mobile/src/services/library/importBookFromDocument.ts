@@ -5,7 +5,7 @@ import { randomUUID } from "expo-crypto";
 import { upsertBook } from "@/db/books";
 import { BOOK_KINDS } from "@/db/schema";
 
-import { readEpubPackageMetadata, titleFromFilename } from "../epub/readEpubPackageMetadata";
+import { deleteExtractedEpub, readEpubMetadata, titleFromFilename } from "../epub";
 import { copyPickerAssetToLibrary } from "./copyPickerAssetToLibrary";
 import { ensureLibraryEpubDirectory } from "./ensureLibraryEpubDirectory";
 import { destinationPathForImport, libraryRelativePathForImport } from "./importPaths";
@@ -42,14 +42,15 @@ export async function pickAndImportBook(): Promise<ImportBookResult> {
     await ensureLibraryEpubDirectory();
     await copyPickerAssetToLibrary(asset.uri, destination);
 
-    let title = titleFromFilename(filenameForTitle);
-    let author: string | null = null;
+    // Extracting at import validates the file (the reader renders the extracted copy) and
+    // makes the first open instant. An epub we cannot unpack and parse is rejected here.
+    let title: string;
+    let author: string | null;
     try {
-      const meta = await readEpubPackageMetadata(destination, filenameForTitle);
-      title = meta.title;
-      author = meta.author;
-    } catch {
-      title = titleFromFilename(filenameForTitle);
+      ({ title, author } = await readEpubMetadata(bookId, destination, filenameForTitle));
+    } catch (error) {
+      console.warn("Rejected epub at import", error);
+      throw new Error("This file could not be opened as an epub.");
     }
 
     await upsertBook({
@@ -64,6 +65,7 @@ export async function pickAndImportBook(): Promise<ImportBookResult> {
     return { status: "success", bookId };
   } catch (error) {
     await removeFileIfPresent(destination);
+    deleteExtractedEpub(bookId);
     const message = error instanceof Error ? error.message : "Could not import this book.";
     return { status: "error", message };
   }

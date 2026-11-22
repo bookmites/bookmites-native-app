@@ -2,7 +2,7 @@ import { getInfoAsync } from "expo-file-system/legacy";
 
 import { getLibraryEpubRoot } from "../library/getLibraryEpubRoot";
 
-/** Joins library root + stored relative path for Readium `file://` open. */
+/** Joins library root + stored relative path into the imported epub’s `file://` URI. */
 export function resolveImportedEpubPath(libraryRelativePath: string): string {
   const root = getLibraryEpubRoot();
   const relative = libraryRelativePath.replace(/^\/+/, "");

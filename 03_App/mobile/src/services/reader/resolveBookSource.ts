@@ -1,16 +1,12 @@
-import type { ReadiumFile } from "react-native-readium";
-
 import { getBook } from "@/db/books";
 import { BOOK_KINDS, type BookRow } from "@/db/schema";
 
 import { isFixtureId } from "./fixtures";
-import { loadStoredLocator } from "./locatorStorage";
-import { importedEpubExists, resolveImportedEpubPath } from "./resolveImportedEpubPath";
 import { resolveBundledEpub } from "./resolveBundledEpub";
+import { importedEpubExists, resolveImportedEpubPath } from "./resolveImportedEpubPath";
 
-export type ResolvedBookFile = ReadiumFile & { url: string; title: string };
-
-async function resolveEpubUrl(book: BookRow): Promise<string> {
+/** URI of a book's original `.epub` (the source of truth the reader extracts from). */
+export async function resolveBookSourceUri(book: BookRow): Promise<string> {
   if (book.kind === BOOK_KINDS.bundledFixture) {
     const fixtureKey = book.fixtureKey;
     if (!fixtureKey || !isFixtureId(fixtureKey)) {
@@ -36,18 +32,10 @@ async function resolveEpubUrl(book: BookRow): Promise<string> {
   throw new Error(`Unknown book kind for “${book.bookId}”.`);
 }
 
-/**
- * Resolves a `bookId` to an on-device epub and any saved reading position.
- */
-export async function resolveBookFile(bookId: string): Promise<ResolvedBookFile> {
+export async function getBookOrThrow(bookId: string): Promise<BookRow> {
   const book = await getBook(bookId);
   if (!book) {
     throw new Error(`Unknown book “${bookId}”.`);
   }
-
-  const url = await resolveEpubUrl(book);
-  const initialLocation = await loadStoredLocator(bookId);
-
-  const base = { url, title: book.title };
-  return initialLocation ? { ...base, initialLocation } : base;
+  return book;
 }

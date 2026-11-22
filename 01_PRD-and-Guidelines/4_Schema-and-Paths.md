@@ -2,7 +2,7 @@
 
 **Living document** for **SQLite tables, filesystem layout, and path rules** on device. The [Architecture overview](./3_Architecture-and-Dependencies.md) stays high-level; **this file** records concrete decisions, rationale, and what ships in each phase so tickets (001–004…) do not need to re-debate them.
 
-**Source of truth in code:** `03_App/mobile/src/db/schema.ts`, migrations under `src/db/drizzle/`, `getLibraryEpubRoot()` in `src/services/library/`, open resolution in `src/services/reader/resolveBookFile.ts`.
+**Source of truth in code:** `03_App/mobile/src/db/schema.ts`, migrations under `src/db/drizzle/`, `getLibraryEpubRoot()` in `src/services/library/`, open resolution in `src/services/reader/openReaderBook.ts`, extraction in `src/services/epub/storage/extractEpub.ts`.
 
 **When to update:** After a ticket changes schema, paths, integrity rules, or open/import behavior—summarize the decision here and link the ticket.
 
@@ -17,7 +17,7 @@
 | **Bytes vs flags** | Removing a file from device updates **`file_on_device`** (and maybe presence of bytes on disk)—**not** locator rows. |
 | **Paths in DB are relative** | Imported epubs store **`library_relative_path`**; absolute `file://` URIs are built at open time via **`getLibraryEpubRoot()`**. Avoids baking install-specific prefixes into SQLite. |
 | **Copy on import** | User picks a file; app copies into app-private storage and reads **our copy** (see [Architecture — import policy](./3_Architecture-and-Dependencies.md)). |
-| **Locators, not pixels** | Progress stores **Readium locator JSON** so font/theme reflow does not break resume. |
+| **CFIs, not pixels** | Progress and highlights store **EPUB CFIs** so font/theme reflow does not break resume ([ticket 007](../02_Tickets/007_In-house-epub-reader.md); Readium locator JSON before that). |
 | **Migrations are real** | **expo-sqlite + Drizzle**, versioned SQL in repo; `PRAGMA foreign_keys = ON` on DB open. |
 
 ---
@@ -47,7 +47,9 @@
 
 **Not stored in SQLite:** Absolute `file://` paths for imported books.
 
-**Open path (imported):** `join(getLibraryEpubRoot(), library_relative_path)` → pass to Readium (existence check before open when `file_on_device = 1`).
+**Open path (imported):** `join(getLibraryEpubRoot(), library_relative_path)` → existence check when `file_on_device = 1` → **extract** (below) → reader WebView renders the extracted spine documents.
+
+**Extracted cache (ticket 007):** The reader WebView renders spine XHTML straight from disk, so each epub is unpacked to **`{cacheDirectory}epub-extracted/{bookId}/`**. The original `.epub` under the library root stays the **source of truth**; the extracted directory is **regenerable** (OS cache root: excluded from backups, may be purged — the reader re-extracts on open). A marker file `.bookmites-extracted.json` (format version + source size) is written last; a missing/stale marker triggers re-extraction. At extraction, author scripts are **neutralised without changing DOM structure** (scripts retyped, `on*` handlers renamed, `javascript:` URLs blocked) so CFIs are unaffected. Zip entries that would escape the directory are skipped.
 
 **Bundled dev epubs:** No file under library root. **`kind = bundled_fixture`** uses **`fixture_key`** → bundled asset resolver (`resolveBundledEpub`). `library_relative_path` is NULL.
 
@@ -74,10 +76,10 @@
 | Column | Purpose |
 |--------|---------|
 | `book_id` | PK; FK → `books.book_id` **ON DELETE RESTRICT**. |
-| `locator_json` | Readium `Locator` serialized as JSON TEXT. |
+| `cfi` | **Point CFI** of the first content in view (TEXT). Was `locator_json` (Readium) until **007**. |
 | `updated_at` | Epoch ms; saves debounced in reader session (**002**). |
 
-**Why RESTRICT (not CASCADE):** Progress is precious. Deleting a `books` row must not happen accidentally and orphan or auto-wipe locators.
+**Why RESTRICT (not CASCADE):** Progress is precious. Deleting a `books` row must not happen accidentally and orphan or auto-wipe positions.
 
 **Product implication ([ticket 003](../02_Tickets/003_Books-table-v1.md)):**
 
@@ -90,13 +92,14 @@
 
 | Column | Purpose |
 |--------|---------|
-| `quote_id` | PK; `randomUUID()` on create (not derived from locator). |
+| `quote_id` | PK; `randomUUID()` on create (not derived from position). |
 | `book_id` | FK → `books.book_id` **ON DELETE RESTRICT**. |
-| `locator_json` | Readium `Locator` JSON; updated when user changes highlight scope in reader. |
-| `snippet` | Selection text at save time (required for list UI; paired with locator). |
+| `cfi` | **Range CFI** of the highlighted text; updated when user changes highlight scope in reader. Was `locator_json` (Readium) until **007**. |
+| `refcode` | INTEGER, nullable. **Refcode** of the range start — a sortable reading-order key (`listBookQuotesByBook` orders by it). Null if it could not be computed. |
+| `snippet` | Selection text at save time, whitespace-collapsed (required for list UI; paired with the CFI). |
 | `created_at`, `updated_at` | Epoch ms; `updated_at` changes on in-reader highlight edit. |
 
-**Boundary:** CRUD in `db/bookQuotes.ts` + `services/bookQuotes/`; decorations/selection in `services/reader/` only. Features do not import Readium.
+**Boundary:** CRUD in `db/bookQuotes.ts` + `services/bookQuotes/`; highlight painting/selection in `services/reader/` + the WebView bundle (`services/epub/injected/`). Features do not import the WebView or the epub engine.
 
 ---
 
@@ -145,12 +148,12 @@
 
 | Layer | Responsibility |
 |-------|----------------|
-| `db/` | `getBook`, `upsertBook`, progress helpers; no Readium. |
-| `services/library/` | `getLibraryEpubRoot()`, `pickAndImportBook`, `listLibraryBooks` (UI sort). |
-| `services/epub/` | Package OPF metadata for import only (not Readium). |
+| `db/` | `getBook`, `upsertBook`, progress helpers; no epub logic. |
+| `services/library/` | `getLibraryEpubRoot()`, `pickAndImportBook` (copy → extract → OPF metadata), `listLibraryBooks` (UI sort). |
+| `services/epub/` | In-house engine: OPF/spine (`core/epub.ts`), CFIs, selectors, refcodes (`core/`), WebView bundle (`injected/`), extraction (`storage/`). |
 | `features/library/` | List UI, `useLibraryBooks`; calls `services/`, `db/`. |
-| `services/reader/` | `resolveBookFile`: load book row → URL + optional `initialLocation` from progress. |
-| `features/reader/` | UI; does not import Readium or parse locators. |
+| `services/reader/` | `openReaderBook`: book row → source epub → extracted `Epub` + saved CFI; `ReaderSurface` (WebView); session/quotes/font hooks. |
+| `features/reader/` | UI; does not import the WebView or parse CFIs. |
 
 **Decision:** **SQLite `books` is source of truth** for which `bookId`s exist—not an in-memory map (removed in **003**).
 
@@ -164,6 +167,7 @@
 | `0001_happy_nitro` | 003 | `books`, smoke `INSERT`, `reading_progress` rebuilt with FK **RESTRICT**. |
 | `0002_neat_tyger_tiger` | 005 | `reader_global_settings` (global font size tier). |
 | `0003_sweet_ghost_rider` | 006 | `book_quotes` (highlights / BookQuote rows). |
+| `0004_in_house_reader_cfi` | 007 | Clears `reading_progress` + `book_quotes` (Readium data discarded); `locator_json` → `cfi` on both; adds `book_quotes.refcode`. Hand-written (drizzle-kit's rename prompt is interactive); snapshot verified with `drizzle-kit check` / no-op `generate`. |
 
 ---
 
@@ -175,9 +179,9 @@
 
 **Default:** No row required on first run — app treats missing row as **`medium`**; first change upserts `global`.
 
-**Wire format:** `services/reader/readerFontSizeTier.ts` maps tier → Readium `preferences.fontSize` (Medium = product 1×; Small uses Readium min `1.0` with Medium baseline scaled so Small ≈ 0.85× Medium).
+**Wire format:** `services/reader/readerFontSizeTier.ts` maps tier → root font size injected as CSS into each spine document (Medium = 18px; Small 0.85×, Large 1.25×, XL 1.5×, 2XL 1.75×). Publisher styles in relative units scale with it. *(Before 007: Readium `preferences.fontSize`.)*
 
-**Shell vs epub:** Only `ReadiumView` receives `preferences`; library/reader chrome uses `design/tokens`.
+**Shell vs epub:** Only the reader WebView receives the reader stylesheet; library/reader chrome uses `design/tokens`.
 
 ---
 
@@ -185,7 +189,7 @@
 
 1. User picks epub via **`expo-document-picker`**.
 2. App assigns **`randomUUID()`** `bookId`, copies to **`{getLibraryEpubRoot()}{bookId}.epub`**.
-3. **`readEpubPackageMetadata`** reads `dc:title` / `dc:creator` from copied bytes; filename fallback if OPF fails.
+3. **`readEpubMetadata`** extracts the copy (see *Extracted cache*) and reads `dc:title` / `dc:creator` via the core `Epub`; filename fallback for a missing title. **An epub that cannot be extracted and parsed is rejected** (copy and extraction removed) — since **007**, previously it was imported with a filename title.
 4. **`upsertBook`** with `kind = imported`, `library_relative_path = {bookId}.epub`, `file_on_device = 1`.
 5. Library UI lists all `books` rows; **`bundled_fixture`** first, then imported by title. No navigation to reader after import.
 
@@ -194,7 +198,7 @@
 ## Explicitly later (not decided here)
 
 - **006 follow-ons:** Per-quote delete, colors/tags/notes on `book_quotes`.
-- Remove-file and remove-book UX wired to semantics above.
+- Remove-file and remove-book UX wired to semantics above (remove-book should also call `deleteExtractedEpub`).
 - Import **dedupe by hash**; cloud backup shape; soft-delete vs hard-delete.
 - Whether **`onConflictDoUpdate`** on `upsertBook` should preserve `added_at` on conflict (current code sets on insert only).
 
@@ -204,4 +208,4 @@
 
 - [Architecture and dependencies](./3_Architecture-and-Dependencies.md) — stack, copy-on-import, locators, folder layout.
 - [Phases and progress](./1_Phases-and-Progress.md) — product capabilities Phase 0.2.
-- Tickets: [002](../02_Tickets/002_Persistent-Location.md), [003](../02_Tickets/003_Books-table-v1.md), [004](../02_Tickets/004_Copy-on-import-and-library-list.md).
+- Tickets: [002](../02_Tickets/002_Persistent-Location.md), [003](../02_Tickets/003_Books-table-v1.md), [004](../02_Tickets/004_Copy-on-import-and-library-list.md), [006](../02_Tickets/006_Highlighting-Basics.md), [007](../02_Tickets/007_In-house-epub-reader.md).

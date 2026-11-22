@@ -1,6 +1,6 @@
 /**
  * Cross-feature services (import, reader adapter, etc.).
- * Readium stays behind services — not in features (ticket 001).
+ * The epub engine and reader WebView stay behind services — not in features (tickets 001, 007).
  */
 export {
   createBookQuote,
@@ -22,12 +22,13 @@ export {
   READER_FONT_SIZE_LABELS,
   READER_FONT_SIZE_TIERS,
   isReaderFontSizeTier,
-  resolveBookFile,
   useReaderBookQuotes,
   useReaderBookSession,
   useReaderFontSize,
   type BookId,
+  type ReaderBook,
   type ReaderFontSizeTier,
+  type ReaderLocation,
+  type ReaderSurfaceHandle,
   type ReaderSurfaceProps,
-  type ResolvedBookFile,
 } from "./reader";

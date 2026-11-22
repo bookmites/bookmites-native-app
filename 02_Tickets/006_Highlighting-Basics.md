@@ -1,10 +1,10 @@
 ---
-Status: implemented (pending device acceptance)
+Status: superseded by 007 (completed on the in-house reader)
 Tags: readium, book-quotes, highlights, notebook, sqlite, locator
 ---
 # Ticket 006 — BookQuotes: highlight basics + Notebook + data page
 
-**Status:** Implemented (pending device acceptance)  
+**Status:** Superseded by [007 — In-house epub reader](./007_In-house-epub-reader.md). The product scope below (create / edit / persist / Notebook / data page) is completed there on the in-house reader; the Readium implementation notes are historical. Schema changed in 007: `locator_json` → `cfi`, plus `refcode`.  
 **Phase:** 0.2 — Read a book  
 **Created:** 2026-11-18  
 

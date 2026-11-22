@@ -36,3 +36,6 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
+
+# generated reader WebView bundle (npm run build:reader)
+src/services/epub/injected/generated/

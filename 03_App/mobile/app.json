@@ -9,18 +9,6 @@
     "newArchEnabled": true,
     "plugins": [
       "expo-router",
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "compileSdkVersion": 36,
-            "targetSdkVersion": 36,
-            "kotlinVersion": "2.3.20"
-          }
-        }
-      ],
-      "./plugins/withKotlinGradlePlugin",
-      "./plugins/withReadiumDesugaring",
       "expo-asset",
       "expo-sqlite"
     ],

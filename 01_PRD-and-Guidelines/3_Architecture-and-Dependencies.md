@@ -13,19 +13,19 @@ Core Goals:
 FOSS mobile reader for epub2/epub3, text-first (images OK; rich media not a priority). Phase 0.2 is **local-first**: no account or cloud required to read. **Android-first** for builds and dogfooding; iOS in Phase 0 but not the initial integration spike.
 
 #### Client platform
-**React Native** with **Expo** (managed workflow + **development builds**). Stock **Expo Go** is insufficient once Readium is in the stack; day-to-day work stays Metro + Fast Refresh after a custom dev client is installed.
+**React Native** with **Expo** (managed workflow + **development builds**). Day-to-day work is Metro + Fast Refresh on a custom dev client. *(Readium forced the dev build; since [007](../02_Tickets/007_In-house-epub-reader.md) every native dependency ships in Expo Go, but we keep the dev-client workflow.)*
 
 #### Code layout
-Application code under `03_App/mobile/src/`: **`features/`** (library, reader, …), **`components/ui/`**, **`services/`**, **`db/`**, **`design/`**. Product screens and hooks live in features; shared UI is product-agnostic. **Features do not import Readium directly.**
+Application code under `03_App/mobile/src/`: **`features/`** (library, reader, …), **`components/ui/`**, **`services/`**, **`db/`**, **`design/`**. Product screens and hooks live in features; shared UI is product-agnostic. **Features do not import the epub engine or the reader WebView directly.**
 
 #### Epub engine
-**Readium** via **`react-native-readium`**—native reader surface, not WebView + epub.js. Chosen for pagination, highlighting, and locator stability when users change fonts and reading settings.
+**In-house engine** ([007](../02_Tickets/007_In-house-epub-reader.md)) in `services/epub/`: OPF/spine parsing, **CFIs**, DOM selectors, and **refcodes** (`core/`, from the original Bookmites web implementation), rendered by a **`react-native-webview`** that loads one extracted spine document at a time with our injected reader bundle (`injected/`). Replaced **Readium** (`react-native-readium`), whose paginated selection handles flickered on Android ([006.1](../02_Tickets/006.1_Highlight-bug-spike.md)). Layout is **continuous scroll per spine document** for now; a CSS-column pagination manager is ported and ready to wire later.
 
 #### Reader integration
-A thin **`services/`** reader adapter exposes app-level verbs: open/close, TOC, `goTo(locator)`, position updates, highlights; later, text around a locator for AI. Insulates `features/reader/` from Readium API churn and keeps one place to debug reading behavior.
+A thin **`services/reader/`** adapter exposes app-level verbs in **CFIs**: open a book, current location, go to a spine document/target, position updates, native-selection actions (Highlight / Copy), highlight painting and taps; later, text around a CFI for AI (`Epub.extractTextRange`). Insulates `features/reader/` from the WebView and keeps one place to debug reading behavior.
 
 #### Local data
-**App-private filesystem** holds epub copies; **SQLite** holds structured library and reading state. Optional user-driven cloud backup is a later concern; Phase 0.2 assumes the phone is the source of truth.
+**App-private filesystem** holds epub copies (source of truth) plus a regenerable **extracted** copy per book in the cache directory for the WebView; **SQLite** holds structured library and reading state. Optional user-driven cloud backup is a later concern; Phase 0.2 assumes the phone is the source of truth.
 
 #### Data model
 **Book records** (title, paths, `fileOnDevice`, etc.) are separate from **user artifacts** (progress, highlights, notes) linked by `bookId`. Users can remove the epub file from device but keep artifacts until they explicitly delete the book from the library.
@@ -37,18 +37,18 @@ A thin **`services/`** reader adapter exposes app-level verbs: open/close, TOC, 
 **Copy on import** into app storage from the system file picker—no reference-only URIs. Mobile paths are unreliable; we always read our own copy so opens do not break when Downloads or email attachments move.
 
 #### Locators
-Store **Readium locator JSON** for reading position and highlights—not pixel scroll or page index—so reflow and font changes do not lose the user’s place. Optional plain-text **snippet** on highlights for list/search UI only.
+Store **EPUB CFIs** for reading position (point CFI) and highlights (range CFI)—not pixel scroll or page index—so reflow and font changes do not lose the user’s place. Highlights also store a **refcode** (sortable reading-order integer) and a plain-text **snippet** for list/search UI. *(Readium locator JSON until 007.)*
 
 #### Build & test
-APKs via Gradle (`expo run:android`, EAS when useful). Readium needs **JDK 17** and native Android/iOS config persisted through Expo **prebuild** and config plugins. Primary validation target: physical Android device, not desktop browser.
+APKs via Gradle (`expo run:android`, EAS when useful). **JDK 17** for local Android builds. The reader WebView bundle is built with **esbuild** (`npm run build:reader`, also run on install/start). Pure-TS engine code has **Jest** tests (`npm test`). Primary validation target: physical Android device, not desktop browser.
 
 #### Android API levels
-Use **Expo’s defaults** for `minSdk` and `targetSdk` at project creation; ensure **compileSdk** satisfies Readium. Do not raise `minSdk` without a concrete feature need—confirm values in `build.gradle` during the Readium spike.
+Use **Expo / React Native defaults** for `minSdk`, `compileSdk` and `targetSdk` (36 with RN 0.86). The Readium-era overrides (compileSdk pin, Kotlin 2.3.20, core-library desugaring) were removed in **007**. Do not raise `minSdk` without a concrete feature need.
 
 #### Explicitly later
 In-app AI and BYOK, book companion/skill files, opt-in cloud backup, import dedupe by file hash, Play Store release and signing hardening. None of these block Phase 0.2 “read a book.”
 
-*Feedback welcome on: Readium + Expo integration risk, adapter boundaries, locator/highlight schema, and anything we’re underestimating for a quality highlight UX.*
+*Feedback welcome on: WebView reader performance on long chapters, adapter boundaries, CFI/highlight schema, pagination, and anything we’re underestimating for a quality highlight UX.*
 
 
 
@@ -110,7 +110,19 @@ In-app AI and BYOK, book companion/skill files, opt-in cloud backup, import dedu
 
 -------------------------------------------------------
 
-**Epub engine: Readium**
+**Epub engine: in-house WebView reader (ticket 007) — supersedes Readium**
+
+*Decision (007):* Replace `react-native-readium` with the in-house engine from the original Bookmites implementation: `services/epub/core` (OPF, CFI, selector, refcode — pure TS, Jest-tested) plus a `react-native-webview` surface running an injected reader bundle (`services/epub/injected`). Selection uses the **native WebView selection** with a custom “Highlight” (and on Android “Copy”) menu item; a custom word-snapping selection (`TextSelectionInteractionWord`) is kept in core for later.
+
+*Why:* Readium’s paginated Android selection flickered while dragging handles ([006.1](../02_Tickets/006.1_Highlight-bug-spike.md)) with no app-side fix; we need control over selection and highlight rendering, and the in-house engine was already ours. Dropping Readium also drops Nitro modules, the desugaring/Kotlin config plugins, and the SDK pins.
+
+*Tradeoffs (accepted):* Continuous scroll per spine document (no pagination yet; `core/display/page.ts` has a column manager to wire later). No table of contents yet. We own epub-compat edge cases (`.html` spine documents parsed as HTML vs XML, unusual OPF layouts). CFIs follow the engine’s step convention (text steps index text nodes only), which matches our own DOM and xmldom but may differ from other readers for some markup.
+
+*Security:* Imported epubs are untrusted. Scripts are neutralised at extraction without changing DOM structure; the WebView gets no cross-file access from `file://` pages and (iOS) read access only to the book’s directory; external links open in the system browser.
+
+---
+
+*Historical (pre-007):*
 
 *What it is:* [Readium](https://readium.org/) is an open-source **epub engine** (parsing, layout, navigation, accessibility) used by serious reading apps. In our stack we integrate it via **[react-native-readium](https://github.com/5-stones/react-native-readium)** (native Android/iOS views + JS API)—not a WebView wrapping epub.js.
 
@@ -130,6 +142,8 @@ In-app AI and BYOK, book companion/skill files, opt-in cloud backup, import dedu
 -------------------------------------------------------
 
 **Reader adapter (`services/` reader engine)**
+
+*(Since 007 the adapter wraps the in-house WebView reader; the verbs below are unchanged, in CFIs instead of Readium locators.)*
 
 *What it is:* A thin **adapter** between app features and `react-native-readium`—a stable in-app API (names like `EpubSession` or `readerEngine` are fine). Features do **not** import Readium directly.
 
@@ -217,7 +231,9 @@ Two ideas that work together (not either/or):
 
 **Locator scheme for progress and highlights**
 
-*Assuming we go with Readium:* Progress and highlights must survive **font, theme, and margin changes**—store a **logical place in the publication**, not scroll pixels or screen coordinates.
+*Decision (007):* **CFI strings** (point CFI for progress, range CFI for highlights) replace Readium locator JSON; highlights also store a **refcode** for reading-order sorting. Existing Readium rows were discarded (pre-release data). Progress percentage from CFIs is a planned follow-up.
+
+*Historical (pre-007), assuming we go with Readium:* Progress and highlights must survive **font, theme, and margin changes**—store a **logical place in the publication**, not scroll pixels or screen coordinates.
 
 *What we store:*
 - **Readium locator (JSON)** — structured object the engine uses (`href`, locations/fragments, optional text hints). Serialized as `TEXT` in SQLite.

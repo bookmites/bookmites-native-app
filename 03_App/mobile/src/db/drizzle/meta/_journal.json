@@ -29,6 +29,13 @@
       "when": 1795097922123,
       "tag": "0003_sweet_ghost_rider",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1795311544733,
+      "tag": "0004_in_house_reader_cfi",
+      "breakpoints": true
     }
   ]
 }

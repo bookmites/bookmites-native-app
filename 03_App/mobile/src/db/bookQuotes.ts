@@ -1,5 +1,5 @@
 import { randomUUID } from "expo-crypto";
-import { desc, eq } from "drizzle-orm";
+import { asc, desc, eq, sql } from "drizzle-orm";
 
 import { getDb } from "./client";
 import { bookQuotes, books, type BookQuoteRow } from "./schema";
@@ -11,7 +11,8 @@ export type BookQuoteWithBookTitle = BookQuoteRow & {
 
 export async function createBookQuote(input: {
   bookId: string;
-  locatorJson: string;
+  cfi: string;
+  refcode: number | null;
   snippet: string;
 }): Promise<BookQuoteRow> {
   const db = getDb();
@@ -19,7 +20,8 @@ export async function createBookQuote(input: {
   const row: BookQuoteRow = {
     quoteId: randomUUID(),
     bookId: input.bookId,
-    locatorJson: input.locatorJson,
+    cfi: input.cfi,
+    refcode: input.refcode,
     snippet: input.snippet,
     createdAt: now,
     updatedAt: now,
@@ -31,7 +33,8 @@ export async function createBookQuote(input: {
 
 export async function updateBookQuote(input: {
   quoteId: string;
-  locatorJson: string;
+  cfi: string;
+  refcode: number | null;
   snippet: string;
 }): Promise<BookQuoteRow | null> {
   const db = getDb();
@@ -40,7 +43,8 @@ export async function updateBookQuote(input: {
   await db
     .update(bookQuotes)
     .set({
-      locatorJson: input.locatorJson,
+      cfi: input.cfi,
+      refcode: input.refcode,
       snippet: input.snippet,
       updatedAt,
     })
@@ -55,13 +59,14 @@ export async function updateBookQuote(input: {
   return rows[0] ?? null;
 }
 
+/** Quotes for one book in reading order (refcode), unsortable ones last by creation time. */
 export async function listBookQuotesByBook(bookId: string): Promise<BookQuoteRow[]> {
   const db = getDb();
   return db
     .select()
     .from(bookQuotes)
     .where(eq(bookQuotes.bookId, bookId))
-    .orderBy(desc(bookQuotes.createdAt));
+    .orderBy(sql`${bookQuotes.refcode} IS NULL`, asc(bookQuotes.refcode), asc(bookQuotes.createdAt));
 }
 
 export async function listAllBookQuotes(): Promise<BookQuoteWithBookTitle[]> {
@@ -70,7 +75,8 @@ export async function listAllBookQuotes(): Promise<BookQuoteWithBookTitle[]> {
     .select({
       quoteId: bookQuotes.quoteId,
       bookId: bookQuotes.bookId,
-      locatorJson: bookQuotes.locatorJson,
+      cfi: bookQuotes.cfi,
+      refcode: bookQuotes.refcode,
       snippet: bookQuotes.snippet,
       createdAt: bookQuotes.createdAt,
       updatedAt: bookQuotes.updatedAt,

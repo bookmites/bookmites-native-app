@@ -3,8 +3,8 @@ export { getDb, db } from "./client";
 export { getBook, listBooks, upsertBook, type UpsertBookInput } from "./books";
 export {
   deleteReadingProgress,
-  getReadingProgressJson,
-  upsertReadingProgressJson,
+  getReadingProgressCfi,
+  upsertReadingProgressCfi,
 } from "./readingProgress";
 export {
   createBookQuote,
