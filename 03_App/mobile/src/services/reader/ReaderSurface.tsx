@@ -74,6 +74,10 @@ export type ReaderSurfaceProps = {
   onSelectionChange?: (selection: ReaderSelection | null) => void;
   onSelectionAction?: (action: ReaderSelectionAction, selection: ReaderSelection) => void;
   onHighlightTap?: (id: string) => void;
+  /** Quick tap on book content (not highlight, not selection drag). */
+  onContentTap?: () => void;
+  /** When false (nav chrome), in-document selection/highlight is disabled. */
+  textSelectionEnabled?: boolean;
   /** A link inside the book points at another spine document. */
   onNavigate?: (spineIndex: number, target: ReaderTarget) => void;
   onError?: (message: string) => void;
@@ -83,7 +87,7 @@ export type ReaderSurfaceProps = {
 
 // Android replaces the whole selection menu with custom items, so Copy is ours to provide;
 // iOS appends custom items to the system menu, which already has Copy.
-const MENU_ITEMS =
+const SELECTION_MENU_ITEMS =
   Platform.OS === "android"
     ? [
         { label: "Highlight", key: "highlight" },
@@ -157,6 +161,8 @@ export const ReaderSurface = memo(function ReaderSurface({
   onSelectionChange,
   onSelectionAction,
   onHighlightTap,
+  onContentTap,
+  textSelectionEnabled = true,
   onNavigate,
   onError,
   style,
@@ -171,6 +177,7 @@ export const ReaderSurface = memo(function ReaderSurface({
   const documentUri = useMemo(() => epub.spineFileUri(spineIndex), [epub, spineIndex]);
   const loadId = `${documentUri ?? ""}|${String(reloadKey)}`;
   const ready = readyLoadId === loadId;
+  const menuItems = textSelectionEnabled ? SELECTION_MENU_ITEMS : [];
 
   const spineUris = useMemo(
     () => epub.spine.itemref.map((_, index) => normalizeFileUrl(epub.spineFileUri(index) ?? "")),
@@ -223,6 +230,8 @@ export const ReaderSurface = memo(function ReaderSurface({
     onSelectionChange,
     onSelectionAction,
     onHighlightTap,
+    onContentTap,
+    textSelectionEnabled,
     onNavigate,
     onError,
   });
@@ -235,6 +244,8 @@ export const ReaderSurface = memo(function ReaderSurface({
     onSelectionChange,
     onSelectionAction,
     onHighlightTap,
+    onContentTap,
+    textSelectionEnabled,
     onNavigate,
     onError,
   };
@@ -280,6 +291,16 @@ export const ReaderSurface = memo(function ReaderSurface({
   }, [ready, css, highlightsJson, spineHighlights, location.nonce, location.target, send]);
 
   useEffect(() => {
+    if (!ready) {
+      return;
+    }
+    send({ type: "setTextSelectionEnabled", enabled: textSelectionEnabled });
+    if (!textSelectionEnabled) {
+      send({ type: "clearSelection" });
+    }
+  }, [ready, textSelectionEnabled, send]);
+
+  useEffect(() => {
     if (ready) {
       return;
     }
@@ -318,6 +339,9 @@ export const ReaderSurface = memo(function ReaderSurface({
           reportVisible(message.visible);
           return;
         case "selection": {
+          if (!current.textSelectionEnabled) {
+            return;
+          }
           if (!message.range) {
             current.onSelectionChange?.(null);
             return;
@@ -334,6 +358,9 @@ export const ReaderSurface = memo(function ReaderSurface({
         case "highlightTap":
           current.onHighlightTap?.(message.id);
           return;
+        case "contentTap":
+          current.onContentTap?.();
+          return;
         case "log":
           if (message.level === "error") {
             console.warn(`[reader] ${message.message}`);
@@ -348,6 +375,9 @@ export const ReaderSurface = memo(function ReaderSurface({
 
   const onCustomMenuSelection = useCallback(
     (event: { nativeEvent: { key: string; selectedText: string } }) => {
+      if (!latest.current.textSelectionEnabled) {
+        return;
+      }
       const { key, selectedText } = event.nativeEvent;
       if (key !== "highlight" && key !== "copy") {
         return;
@@ -434,7 +464,7 @@ export const ReaderSurface = memo(function ReaderSurface({
         // Our font-size tiers own text size; ignore the Android system font scale.
         textZoom={100}
         overScrollMode="never"
-        menuItems={MENU_ITEMS}
+        menuItems={menuItems}
         onCustomMenuSelection={onCustomMenuSelection}
         onContentProcessDidTerminate={recover}
         onRenderProcessGone={recover}

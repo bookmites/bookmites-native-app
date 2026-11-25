@@ -54,6 +54,7 @@ export type ReaderCommand =
     | { type: 'goTo'; target: ReaderTarget }
     | { type: 'select'; range: AddressRange }
     | { type: 'clearSelection' }
+    | { type: 'setTextSelectionEnabled'; enabled: boolean }
 
 /** WebView → app. */
 export type ReaderMessage =
@@ -61,4 +62,5 @@ export type ReaderMessage =
     | { type: 'location'; spineIndex: number; visible: AddressRange }
     | { type: 'selection'; spineIndex: number; range: AddressRange | null; text: string }
     | { type: 'highlightTap'; spineIndex: number; id: string }
+    | { type: 'contentTap'; spineIndex: number }
     | { type: 'log'; level: 'info' | 'warn' | 'error'; message: string }

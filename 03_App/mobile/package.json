@@ -10,6 +10,7 @@
     "start": "expo start --dev-client",
     "preandroid": "npm run build:reader",
     "android": "expo run:android",
+    "android:clean-native": "bash scripts/clean-android-native.sh",
     "preios": "npm run build:reader",
     "ios": "expo run:ios",
     "web": "expo start --web",
@@ -17,9 +18,11 @@
     "db:generate": "drizzle-kit generate",
     "pretypecheck": "npm run build:reader",
     "typecheck": "tsc --noEmit",
-    "test": "jest"
+    "test": "jest",
+    "lint": "expo lint"
   },
   "dependencies": {
+    "@expo/vector-icons": "^15.0.2",
     "@types/react": "~19.2.4",
     "@xmldom/xmldom": "^0.9.12",
     "drizzle-orm": "^0.45.4",
@@ -39,10 +42,13 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.0",
+    "react-native-gesture-handler": "~2.32.0",
+    "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
     "react-native-web": "^0.21.0",
     "react-native-webview": "13.16.1",
+    "react-native-worklets": "0.10.1",
     "typescript": "~6.0.3"
   },
   "private": true,
