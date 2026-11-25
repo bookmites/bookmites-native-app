@@ -34,6 +34,9 @@ export const READER_GLOBAL_SETTINGS_ID = "global" as const;
 export const readerGlobalSettings = sqliteTable("reader_global_settings", {
   id: text("id").primaryKey(),
   fontSizeTier: text("font_size_tier").notNull(),
+  lastOpenedBookId: text("last_opened_book_id").references(() => books.bookId, {
+    onDelete: "restrict",
+  }),
   updatedAt: integer("updated_at").notNull(),
 });
 

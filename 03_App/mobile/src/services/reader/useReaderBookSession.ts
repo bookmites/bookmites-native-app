@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { setLastOpenedBookId } from "@/db/readerSettings";
 import { parseCfiLocation } from "@/services/epub";
 
 import { openReaderBook, type ReaderBook } from "./openReaderBook";
@@ -89,6 +90,9 @@ export function useReaderBookSession(bookId: string | undefined) {
         if (!cancelled) {
           setLocation(initialLocation(book, initialCfi));
           setState({ status: "ready", book });
+          void setLastOpenedBookId(bookId).catch((error) => {
+            console.warn("Failed to record last opened book", error);
+          });
         }
       })
       .catch((error: unknown) => {

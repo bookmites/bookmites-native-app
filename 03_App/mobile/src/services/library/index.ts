@@ -5,3 +5,4 @@ export {
   type ImportBookResult,
 } from "./importBookFromDocument";
 export { listLibraryBooks, sortLibraryBooks } from "./listLibraryBooks";
+export { resolveBookCoverUri } from "./resolveBookCoverUri";

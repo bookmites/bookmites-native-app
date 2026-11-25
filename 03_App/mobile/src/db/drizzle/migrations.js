@@ -6,6 +6,7 @@ import m0001 from './0001_happy_nitro.sql';
 import m0002 from './0002_neat_tyger_tiger.sql';
 import m0003 from './0003_sweet_ghost_rider.sql';
 import m0004 from './0004_in_house_reader_cfi.sql';
+import m0005 from './0005_last_opened_book.sql';
 
 export default {
   journal,
@@ -15,5 +16,6 @@ export default {
     m0002,
     m0003,
     m0004,
+    m0005,
   },
 };

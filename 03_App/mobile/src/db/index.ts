@@ -13,7 +13,13 @@ export {
   updateBookQuote,
   type BookQuoteWithBookTitle,
 } from "./bookQuotes";
-export { getReaderFontSizeTier, setReaderFontSizeTier } from "./readerSettings";
+export {
+  getLastOpenedBookId,
+  getReaderFontSizeTier,
+  getValidLastOpenedBookId,
+  setLastOpenedBookId,
+  setReaderFontSizeTier,
+} from "./readerSettings";
 export {
   BOOK_KINDS,
   READER_GLOBAL_SETTINGS_ID,

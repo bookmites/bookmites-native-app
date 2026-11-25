@@ -1,5 +1,5 @@
 import { LibraryScreen } from "@/features/library/LibraryScreen";
 
-export default function LibraryRoute() {
+export default function BookmitesLibraryRoute() {
   return <LibraryScreen />;
 }
