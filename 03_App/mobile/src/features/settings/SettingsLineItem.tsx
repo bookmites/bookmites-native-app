@@ -1,30 +1,26 @@
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { AppText } from "@/components/ui/AppText";
-import type { BookRow } from "@/db/schema";
 import { colors, spacing } from "@/design/tokens";
 
-type LibraryBookRowProps = {
-  book: BookRow;
-  onPress: (bookId: string) => void;
+type SettingsLineItemProps = {
+  title: string;
+  description: string;
+  onPress: () => void;
 };
 
-export function LibraryBookRow({ book, onPress }: LibraryBookRowProps) {
+export function SettingsLineItem({ title, description, onPress }: SettingsLineItemProps) {
   return (
     <Pressable
       accessibilityRole="button"
-      onPress={() => onPress(book.bookId)}
+      onPress={onPress}
       style={(state) => [styles.row, state.pressed && styles.pressed]}
     >
       <View style={styles.textBlock}>
-        <AppText variant="body" numberOfLines={2}>
-          {book.title}
+        <AppText variant="body">{title}</AppText>
+        <AppText variant="caption" muted>
+          {description}
         </AppText>
-        {book.author ? (
-          <AppText variant="caption" muted numberOfLines={1}>
-            {book.author}
-          </AppText>
-        ) : null}
       </View>
     </Pressable>
   );

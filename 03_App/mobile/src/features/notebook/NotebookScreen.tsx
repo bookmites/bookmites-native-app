@@ -1,9 +1,8 @@
-import { router, useFocusEffect } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import { useCallback } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, View } from "react-native";
 
 import { AppText } from "@/components/ui/AppText";
-import { Button } from "@/components/ui/Button";
 import { Screen } from "@/components/ui/Screen";
 import { colors, spacing } from "@/design/tokens";
 
@@ -20,10 +19,9 @@ export function NotebookScreen() {
 
   return (
     <Screen>
-      <View style={styles.header}>
-        <AppText variant="title">Notebook</AppText>
-        <Button label="Back" variant="secondary" onPress={() => router.back()} />
-      </View>
+      <AppText variant="title" style={styles.title}>
+        Notebook
+      </AppText>
 
       {error ? (
         <AppText variant="caption" style={styles.error}>
@@ -61,12 +59,8 @@ export function NotebookScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+  title: {
     marginBottom: spacing.lg,
-    gap: spacing.md,
   },
   error: {
     color: colors.textPrimary,

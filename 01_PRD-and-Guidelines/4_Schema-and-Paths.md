@@ -168,6 +168,7 @@
 | `0002_neat_tyger_tiger` | 005 | `reader_global_settings` (global font size tier). |
 | `0003_sweet_ghost_rider` | 006 | `book_quotes` (highlights / BookQuote rows). |
 | `0004_in_house_reader_cfi` | 007 | Clears `reading_progress` + `book_quotes` (Readium data discarded); `locator_json` → `cfi` on both; adds `book_quotes.refcode`. Hand-written (drizzle-kit's rename prompt is interactive); snapshot verified with `drizzle-kit check` / no-op `generate`. |
+| `0005_last_opened_book` | 008 | `reader_global_settings.last_opened_book_id` (nullable FK → `books`, **RESTRICT**). |
 
 ---
 
@@ -175,7 +176,7 @@
 
 | Table | Purpose |
 |-------|---------|
-| `reader_global_settings` | Singleton row `id = global`: `font_size_tier` (`small` \| `medium` \| `large` \| `xl` \| `2xl`), `updated_at`. Not keyed by `bookId`. |
+| `reader_global_settings` | Singleton row `id = global`: `font_size_tier` (`small` \| `medium` \| `large` \| `xl` \| `2xl`), optional `last_opened_book_id` (FK → `books`, **008** GlobalNav **Last**), `updated_at`. Not keyed by `bookId`. |
 
 **Default:** No row required on first run — app treats missing row as **`medium`**; first change upserts `global`.
 

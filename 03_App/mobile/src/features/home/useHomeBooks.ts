@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { BookRow } from "@/db/schema";
 import { listLibraryBooks, pickAndImportBook } from "@/services/library";
 
-export function useLibraryBooks() {
+export function useHomeBooks() {
   const [books, setBooks] = useState<BookRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);

@@ -36,6 +36,13 @@
       "when": 1795311544733,
       "tag": "0004_in_house_reader_cfi",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1795400000000,
+      "tag": "0005_last_opened_book",
+      "breakpoints": true
     }
   ]
 }

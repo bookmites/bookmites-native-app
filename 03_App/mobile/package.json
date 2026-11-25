@@ -17,9 +17,11 @@
     "db:generate": "drizzle-kit generate",
     "pretypecheck": "npm run build:reader",
     "typecheck": "tsc --noEmit",
-    "test": "jest"
+    "test": "jest",
+    "lint": "expo lint"
   },
   "dependencies": {
+    "@expo/vector-icons": "^15.0.2",
     "@types/react": "~19.2.4",
     "@xmldom/xmldom": "^0.9.12",
     "drizzle-orm": "^0.45.4",
@@ -52,6 +54,8 @@
     "babel-plugin-inline-import": "^3.0.0",
     "drizzle-kit": "^0.31.11",
     "esbuild": "^0.28.2",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~57.0.2",
     "jest": "^30.5.2",
     "jest-extended": "^7.0.0"
   }

@@ -1,0 +1,1 @@
+ALTER TABLE `reader_global_settings` ADD `last_opened_book_id` text REFERENCES `books`(`book_id`) ON DELETE restrict;
