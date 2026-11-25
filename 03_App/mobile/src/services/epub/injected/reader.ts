@@ -23,11 +23,15 @@ import type {
 export const INJECT_CLASS = '__bookmites-inject__'
 const READER_STYLE_ID = '__bookmites-reader-style__'
 const BASE_STYLE_ID = '__bookmites-base-style__'
+const SELECT_GUARD_STYLE_ID = '__bookmites-select-guard__'
 const VIEWPORT_META_ID = '__bookmites-viewport__'
 
 const LOCATION_THROTTLE_MS = 200
 const SELECTION_DEBOUNCE_MS = 60
 const LAYOUT_SETTLE_TIMEOUT_MS = 1500
+/** Quick tap to toggle reader chrome — tuned on device. */
+const CONTENT_TAP_MAX_MOVE_PX = 10
+const CONTENT_TAP_MAX_MS = 400
 
 const BASE_CSS = `
 .${INJECT_CLASS} {
@@ -77,6 +81,8 @@ export class InDocumentReader {
     private _ready = false
     private _locationTimer: ReturnType<typeof setTimeout> | null = null
     private _selectionTimer: ReturnType<typeof setTimeout> | null = null
+    /** Nav chrome: no highlight/select; taps return to read. */
+    private _textSelectionEnabled = true
 
     constructor(
         private readonly _params: PreloadParams,
@@ -129,7 +135,28 @@ export class InDocumentReader {
             case 'clearSelection':
                 this._win.getSelection()?.removeAllRanges()
                 return
+            case 'setTextSelectionEnabled':
+                this._textSelectionEnabled = command.enabled
+                this._applyTextSelectionGuard()
+                return
         }
+    }
+
+    private _applyTextSelectionGuard() {
+        if (!this._textSelectionEnabled) {
+            this._writeStyle(
+                SELECT_GUARD_STYLE_ID,
+                `html, body, body * {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+}`,
+            )
+            this._win.getSelection()?.removeAllRanges()
+            return
+        }
+        const block = this._doc.getElementById(SELECT_GUARD_STYLE_ID)
+        block?.remove()
     }
 
     // -- document setup ---------------------------------------------------------------
@@ -229,6 +256,10 @@ export class InDocumentReader {
 
     private _postSelection = () => {
         this._selectionTimer = null
+        if (!this._textSelectionEnabled) {
+            this._win.getSelection()?.removeAllRanges()
+            return
+        }
         const selection = this._win.getSelection()
         const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null
         if (!range || range.collapsed) {
@@ -263,8 +294,62 @@ export class InDocumentReader {
 
     private _addListeners() {
         const userMoved = () => { this._pendingTarget = null }
-        this._win.addEventListener('touchstart', userMoved, { passive: true })
+        let touchStart: { x: number; y: number; t: number } | null = null
+
+        this._win.addEventListener('touchstart', (event: TouchEvent) => {
+            userMoved()
+            const touch = event.changedTouches[0]
+            if (touch) {
+                touchStart = { x: touch.clientX, y: touch.clientY, t: Date.now() }
+            }
+        }, { passive: true })
         this._win.addEventListener('wheel', userMoved, { passive: true })
+
+        this._win.addEventListener('touchend', (event: TouchEvent) => {
+            const start = touchStart
+            touchStart = null
+            if (!start) {
+                return
+            }
+            const touch = event.changedTouches[0]
+            if (!touch) {
+                return
+            }
+            const dx = touch.clientX - start.x
+            const dy = touch.clientY - start.y
+            const dt = Date.now() - start.t
+            const movedTooFar = dx * dx + dy * dy > CONTENT_TAP_MAX_MOVE_PX * CONTENT_TAP_MAX_MOVE_PX
+
+            if (!this._textSelectionEnabled) {
+                if (movedTooFar) {
+                    return
+                }
+                this._win.getSelection()?.removeAllRanges()
+                this._post({ type: 'contentTap', spineIndex: this._params.spineIndex })
+                return
+            }
+
+            if (dt > CONTENT_TAP_MAX_MS) {
+                return
+            }
+            if (movedTooFar) {
+                return
+            }
+            const selection = this._win.getSelection()
+            if (selection && !selection.isCollapsed && selection.toString().trim().length > 0) {
+                return
+            }
+            const probe = new MouseEvent('click', {
+                clientX: touch.clientX,
+                clientY: touch.clientY,
+                bubbles: true,
+            })
+            const { id: highlightId } = this._highlights.getHighlightIdForMouseEvent(probe)
+            if (highlightId) {
+                return
+            }
+            this._post({ type: 'contentTap', spineIndex: this._params.spineIndex })
+        }, { passive: true })
 
         this._win.addEventListener('scroll', () => { this._scheduleLocation() }, { passive: true })
 
@@ -275,9 +360,14 @@ export class InDocumentReader {
 
         this._doc.addEventListener('click', (event: MouseEvent) => {
             const { id } = this._highlights.getHighlightIdForMouseEvent(event)
-            if (id) {
-                this._post({ type: 'highlightTap', spineIndex: this._params.spineIndex, id })
+            if (!id) {
+                return
             }
+            if (!this._textSelectionEnabled) {
+                this._post({ type: 'contentTap', spineIndex: this._params.spineIndex })
+                return
+            }
+            this._post({ type: 'highlightTap', spineIndex: this._params.spineIndex, id })
         })
 
         this._win.addEventListener('resize', () => {
